@@ -53,7 +53,8 @@ private:
 	void reload_indexes(const std::vector<unsigned int>& indexes,
 		bool unattended = false);
 
-	void reload_indexes_impl(std::vector<unsigned int> indexes,
+	/// \return number of failed reloads
+	unsigned int reload_indexes_impl(std::vector<unsigned int> indexes,
 		bool unattended);
 
 	/// \brief Reloads given feed.
@@ -65,7 +66,9 @@ private:
 	/// if \a unattended is false. All network requests are made through
 	/// \a easyhandle. If the handle is not provided, this method creates
 	/// a temporary handle which is destroyed before returning from it.
-	void reload(unsigned int pos,
+	///
+	/// \return false if the reload failed, true otherwise
+	bool reload(unsigned int pos,
 		CurlHandle& easyhandle,
 		bool show_progress,
 		bool unattended);

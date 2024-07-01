@@ -64,7 +64,7 @@ bool Reloader::trylock_reload_mutex()
 	return false;
 }
 
-void Reloader::reload(unsigned int pos,
+bool Reloader::reload(unsigned int pos,
 	CurlHandle& easyhandle,
 	bool show_progress,
 	bool unattended)
@@ -79,7 +79,7 @@ void Reloader::reload(unsigned int pos,
 		// (e.g.  Reloader::reload_all() calling View::prepare_query_feed())
 		if (oldfeed->is_query_feed()) {
 			LOG(Level::DEBUG, "Reloader::reload: skipping query feed");
-			return;
+			return true;
 		}
 
 		std::string errmsg;
@@ -144,10 +144,13 @@ void Reloader::reload(unsigned int pos,
 			oldfeed->set_status(DlStatus::DL_ERROR);
 			ctrl->get_view()->get_statusline().show_error(errmsg);
 			LOG(Level::USERERROR, "%s", errmsg);
+			return false;
 		}
 	} else {
 		ctrl->get_view()->get_statusline().show_error(_("Error: invalid feed!"));
+		return false;
 	}
+	return true;
 }
 
 void Reloader::partition_reload_to_threads(
@@ -227,7 +230,7 @@ void Reloader::reload_all(bool unattended)
 	notify_reload_finished(unread_feeds, unread_articles);
 }
 
-void Reloader::reload_indexes_impl(std::vector<unsigned int> indexes, bool unattended)
+unsigned int Reloader::reload_indexes_impl(std::vector<unsigned int> indexes, bool unattended)
 {
 	auto extract = [](std::string& s, const std::string& url) {
 		size_t p = url.find("//");
@@ -252,6 +255,8 @@ void Reloader::reload_indexes_impl(std::vector<unsigned int> indexes, bool unatt
 		return domain1 < domain2;
 	});
 
+	std::atomic<unsigned int> failed{0};
+
 	partition_reload_to_threads([&](unsigned int start, unsigned int end) {
 		CurlHandle easyhandle;
 		for (auto i = start; i <= end; ++i) {
@@ -259,11 +264,15 @@ void Reloader::reload_indexes_impl(std::vector<unsigned int> indexes, bool unatt
 			LOG(Level::DEBUG,
 				"Reloader::reload_indexes_impl: reloading feed #%u",
 				feed_index);
-			reload(feed_index, easyhandle, true, unattended);
+			if (!reload(feed_index, easyhandle, true, unattended)) {
+				++failed;
+			}
 			// Reset any options set on the handle before next reload
 			curl_easy_reset(easyhandle.ptr());
 		}
 	}, indexes.size());
+
+	return failed;
 }
 
 void Reloader::reload_indexes(const std::vector<unsigned int>& indexes, bool unattended)
