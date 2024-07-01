@@ -72,85 +72,80 @@ bool Reloader::reload(unsigned int pos,
 	ScopeMeasure sm("Reloader::reload");
 	LOG(Level::DEBUG, "Reloader::reload: pos = %u", pos);
 	std::shared_ptr<RssFeed> oldfeed = ctrl->get_feedcontainer()->get_feed(pos);
-	if (oldfeed) {
-		LOG(Level::INFO, "Reloader::reload: starting reload of %s", oldfeed->rssurl());
-
-		// Query feed reloading should be handled by the calling functions
-		// (e.g.  Reloader::reload_all() calling View::prepare_query_feed())
-		if (oldfeed->is_query_feed()) {
-			LOG(Level::DEBUG, "Reloader::reload: skipping query feed");
-			return true;
-		}
-
-		std::string errmsg;
-		std::shared_ptr<AutoDiscardMessage> message_lifetime;
-		if (!unattended) {
-			const std::string progress = show_progress ?
-				strprintf::fmt("(%u/%u) ", ++reload_progress, reload_progress_max) :
-				"";
-			message_lifetime = ctrl->get_view()->get_statusline().show_message_until_finished(
-					strprintf::fmt(_("%sLoading %s..."),
-						progress,
-						utils::censor_url(oldfeed->rssurl())));
-		}
-
-		const bool ignore_dl =
-			(cfg.get_configvalue("ignore-mode") == "download");
-
-		try {
-			const auto inner_message_lifetime = message_lifetime;
-			message_lifetime.reset();
-			oldfeed->set_status(DlStatus::DURING_DOWNLOAD);
-
-			RssIgnores* ign = ignore_dl ? ctrl->get_ignores() : nullptr;
-
-			LOG(Level::INFO, "Reloader::reload: retrieving feed");
-			sm.stopover("start retrieving");
-			FeedRetriever feed_retriever(cfg, *rsscache, easyhandle, ign, ctrl->get_api());
-			const rsspp::Feed feed = feed_retriever.retrieve(oldfeed->rssurl());
-
-			LOG(Level::INFO, "Reloader::reload: parsing feed");
-			sm.stopover("start parsing");
-			RssParser parser(oldfeed->rssurl(), *rsscache, cfg, ign);
-
-			std::shared_ptr<RssFeed> newfeed = parser.parse(feed);
-			sm.stopover("start replacing feed");
-			if (newfeed != nullptr) {
-				ctrl->replace_feed(
-					oldfeed, newfeed, pos, unattended);
-				if (newfeed->total_item_count() == 0) {
-					LOG(Level::DEBUG,
-						"Reloader::reload: feed is empty");
-				}
-			}
-			oldfeed->set_status(DlStatus::SUCCESS);
-		} catch (const DbException& e) {
-			errmsg = strprintf::fmt(
-					_("Error while retrieving %s: %s"),
-					utils::censor_url(oldfeed->rssurl()),
-					e.what());
-		} catch (const std::string& emsg) {
-			errmsg = strprintf::fmt(
-					_("Error while retrieving %s: %s"),
-					utils::censor_url(oldfeed->rssurl()),
-					emsg);
-		} catch (rsspp::Exception& e) {
-			errmsg = strprintf::fmt(
-					_("Error while retrieving %s: %s"),
-					utils::censor_url(oldfeed->rssurl()),
-					e.what());
-		}
-		if (!errmsg.empty()) {
-			oldfeed->set_status(DlStatus::DL_ERROR);
-			ctrl->get_view()->get_statusline().show_error(errmsg);
-			LOG(Level::USERERROR, "%s", errmsg);
-			return false;
-		}
-	} else {
+	if (!oldfeed) {
 		ctrl->get_view()->get_statusline().show_error(_("Error: invalid feed!"));
 		return false;
 	}
-	return true;
+
+	LOG(Level::INFO, "Reloader::reload: starting reload of %s", oldfeed->rssurl());
+
+	// Query feed reloading should be handled by the calling functions
+	// (e.g.  Reloader::reload_all() calling View::prepare_query_feed())
+	if (oldfeed->is_query_feed()) {
+		LOG(Level::DEBUG, "Reloader::reload: skipping query feed");
+		return true;
+	}
+
+	std::string errmsg;
+	std::shared_ptr<AutoDiscardMessage> message_lifetime;
+	if (!unattended) {
+		const std::string progress = show_progress ?
+			strprintf::fmt("(%u/%u) ", ++reload_progress, reload_progress_max) :
+			"";
+		message_lifetime = ctrl->get_view()->get_statusline().show_message_until_finished(
+				strprintf::fmt(_("%sLoading %s..."),
+					progress,
+					utils::censor_url(oldfeed->rssurl())));
+	}
+
+	const bool ignore_dl = (cfg.get_configvalue("ignore-mode") == "download");
+
+	try {
+		const auto inner_message_lifetime = message_lifetime;
+		message_lifetime.reset();
+		oldfeed->set_status(DlStatus::DURING_DOWNLOAD);
+
+		RssIgnores* ign = ignore_dl ? ctrl->get_ignores() : nullptr;
+
+		LOG(Level::INFO, "Reloader::reload: retrieving feed");
+		sm.stopover("start retrieving");
+		FeedRetriever feed_retriever(cfg, *rsscache, easyhandle, ign, ctrl->get_api());
+		const rsspp::Feed feed = feed_retriever.retrieve(oldfeed->rssurl());
+
+		LOG(Level::INFO, "Reloader::reload: parsing feed");
+		sm.stopover("start parsing");
+		RssParser parser(oldfeed->rssurl(), *rsscache, cfg, ign);
+
+		std::shared_ptr<RssFeed> newfeed = parser.parse(feed);
+		sm.stopover("start replacing feed");
+		if (newfeed != nullptr) {
+			ctrl->replace_feed(oldfeed, newfeed, pos, unattended);
+			if (newfeed->total_item_count() == 0) {
+				LOG(Level::DEBUG, "Reloader::reload: feed is empty");
+			}
+		}
+		oldfeed->set_status(DlStatus::SUCCESS);
+		return true;
+	} catch (const DbException& e) {
+		errmsg = strprintf::fmt(
+				_("Error while retrieving %s: %s"),
+				utils::censor_url(oldfeed->rssurl()),
+				e.what());
+	} catch (const std::string& emsg) {
+		errmsg = strprintf::fmt(
+				_("Error while retrieving %s: %s"),
+				utils::censor_url(oldfeed->rssurl()),
+				emsg);
+	} catch (rsspp::Exception& e) {
+		errmsg = strprintf::fmt(
+				_("Error while retrieving %s: %s"),
+				utils::censor_url(oldfeed->rssurl()),
+				e.what());
+	}
+	oldfeed->set_status(DlStatus::DL_ERROR);
+	ctrl->get_view()->get_statusline().show_error(errmsg);
+	LOG(Level::USERERROR, "%s", errmsg);
+	return false;
 }
 
 void Reloader::partition_reload_to_threads(
