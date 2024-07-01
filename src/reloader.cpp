@@ -203,7 +203,7 @@ void Reloader::reload_all(bool unattended)
 	for (unsigned int i = 0; i < num_feeds; ++i) {
 		v.push_back(i);
 	}
-	reload_indexes_impl(v, unattended);
+	unsigned int failer_feed_reloads = reload_indexes_impl(v, unattended);
 
 	// refresh query feeds (update and sort)
 	LOG(Level::DEBUG, "Reloader::reload_all: refresh query feeds");
@@ -222,7 +222,7 @@ void Reloader::reload_all(bool unattended)
 	ctrl->update_feedlist();
 	ctrl->get_view()->force_redraw();
 
-	notify_reload_finished(unread_feeds, unread_articles);
+	notify_reload_finished(unread_feeds, unread_articles, failer_feed_reloads);
 }
 
 unsigned int Reloader::reload_indexes_impl(std::vector<unsigned int> indexes, bool unattended)
@@ -278,9 +278,9 @@ void Reloader::reload_indexes(const std::vector<unsigned int>& indexes, bool una
 	const auto unread_articles =
 		ctrl->get_feedcontainer()->unread_item_count();
 
-	reload_indexes_impl(indexes, unattended);
+	unsigned int failed_feed_reloads = reload_indexes_impl(indexes, unattended);
 
-	notify_reload_finished(unread_feeds, unread_articles);
+	notify_reload_finished(unread_feeds, unread_articles, failed_feed_reloads);
 }
 
 void Reloader::notify(const std::string& msg)
@@ -309,7 +309,8 @@ void Reloader::notify(const std::string& msg)
 }
 
 void Reloader::notify_reload_finished(unsigned int unread_feeds_before,
-	unsigned int unread_articles_before)
+	unsigned int unread_articles_before,
+	unsigned int failed_feed_reloads)
 {
 	const auto unread_feeds =
 		ctrl->get_feedcontainer()->unread_feed_count();
@@ -318,7 +319,8 @@ void Reloader::notify_reload_finished(unsigned int unread_feeds_before,
 	const bool notify_always = cfg.get_configvalue_as_bool("notify-always");
 
 	if (notify_always || unread_feeds > unread_feeds_before ||
-		unread_articles > unread_articles_before) {
+		unread_articles > unread_articles_before ||
+		failed_feed_reloads) {
 		// TODO: Determine what should be done if `unread_articles < unread_articles_before`.
 		// It is expected this can happen if the user marks an article as read
 		// while a reload is in progress.
@@ -335,6 +337,7 @@ void Reloader::notify_reload_finished(unsigned int unread_feeds_before,
 			std::to_string(article_count >= 0 ? article_count : 0));
 		fmt.register_fmt(
 			'D', std::to_string(feed_count >= 0 ? feed_count : 0));
+		fmt.register_fmt('E', std::to_string(failed_feed_reloads));
 		notify(fmt.do_format(cfg.get_configvalue("notify-format")));
 	}
 }
