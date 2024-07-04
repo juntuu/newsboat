@@ -72,6 +72,8 @@ struct LogFiles {
 
     /// The file to which all Level::UserError messages will be written.
     user_error_logfile: Option<File>,
+
+    logs: Vec<String>,
 }
 
 /// Keeps a record of what the program did.
@@ -123,6 +125,7 @@ impl Logger {
             files: Mutex::new(LogFiles {
                 logfile: None,
                 user_error_logfile: None,
+                logs: Vec::new(),
             }),
             loglevel: AtomicIsize::new(-1_isize),
         }
@@ -230,6 +233,11 @@ impl Logger {
         }
 
         if level == Level::UserError {
+            if files.logs.len() > 500 {
+                files.logs.remove(0);
+            }
+            files.logs.push(format!("{}{}", timestamp, String::from_utf8_lossy(data)));
+
             if let Some(ref mut user_error_logfile) = files.user_error_logfile {
                 // Ignoring the error since checking every log() call will be too bothersome.
                 let _ = user_error_logfile.write_all(timestamp.as_bytes());
@@ -259,6 +267,13 @@ impl Logger {
     /// For a more detailed explanation, see `set_loglevel()`.
     pub fn get_loglevel(&self) -> isize {
         self.loglevel.load(Ordering::Relaxed)
+    }
+
+    pub fn get_logs(&self) -> Vec<String> {
+        let files = self.files.lock().expect("Someone poisoned logger's mutex");
+        let mut logs = files.logs.clone();
+        logs.reverse();
+        logs
     }
 }
 

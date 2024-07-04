@@ -17,6 +17,7 @@ mod ffi {
         fn unset_loglevel();
         fn set_logfile(logfile: &str);
         fn get_loglevel() -> i64;
+        fn get_logs() -> Vec<String>;
         fn set_loglevel(level: Level);
         fn log_internal(level: Level, message: &CxxString);
         fn set_user_error_logfile(user_error_logfile: &str);
@@ -45,6 +46,10 @@ fn set_logfile(logfile: &str) {
 
 fn get_loglevel() -> i64 {
     logger::get_instance().get_loglevel() as i64
+}
+
+fn get_logs() -> Vec<String> {
+    logger::get_instance().get_logs()
 }
 
 fn set_loglevel(level: ffi::Level) {
