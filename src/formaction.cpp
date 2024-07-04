@@ -144,6 +144,9 @@ bool FormAction::process_op(Operation op,
 	case OP_PREVDIALOG:
 		v.goto_prev_dialog();
 		break;
+	case OP_MESSAGES:
+		v.push_messages();
+		break;
 	default:
 		return this->process_operation(op, args, bindingType);
 	}

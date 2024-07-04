@@ -185,6 +185,13 @@ static const std::vector<OpDesc> opdescs = {
 		KM_FEEDLIST | KM_ARTICLELIST | KM_SEARCHRESULTSLIST | KM_ARTICLE | KM_PODBOAT | KM_URLVIEW
 	},
 	{
+		OP_MESSAGES,
+		"messages",
+		KeyCombination("m"),
+		translatable("Open messages dialog"),
+		KM_NEWSBOAT
+	},
+	{
 		OP_TOGGLESOURCEVIEW,
 		"toggle-source-view",
 		KeyCombination("u", ShiftState::NoShift, ControlState::Control),
@@ -722,6 +729,7 @@ static const std::map<std::string, std::uint32_t> contexts = {
 	{"feedlist", KM_FEEDLIST},
 	{"filebrowser", KM_FILEBROWSER},
 	{"help", KM_HELP},
+	{"messages", KM_HELP},
 	{"articlelist", KM_ARTICLELIST},
 	{"article", KM_ARTICLE},
 	{"tagselection", KM_TAGSELECT},

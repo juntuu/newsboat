@@ -46,6 +46,8 @@ extern "C" {
 #include "keymap.h"
 #include "logger.h"
 #include "matcherexception.h"
+#include "messages.h"
+#include "messagesformaction.h"
 #include "rssfeed.h"
 #include "selectformaction.h"
 #include "selecttag.h"
@@ -595,6 +597,19 @@ void View::push_help()
 	helpview->set_parent_formaction(fa);
 	helpview->init();
 	formaction_stack.push_back(helpview);
+	current_formaction = formaction_stack_size() - 1;
+}
+
+void View::push_messages()
+{
+	auto fa = get_current_formaction();
+
+	auto messagesview = std::make_shared<MessagesFormAction>(
+			*this, messages_str, cfg);
+	apply_colors(messagesview);
+	messagesview->set_parent_formaction(fa);
+	messagesview->init();
+	formaction_stack.push_back(messagesview);
 	current_formaction = formaction_stack_size() - 1;
 }
 

@@ -35,6 +35,7 @@ src/links.cpp
 src/listformaction.cpp
 src/listformatter.cpp
 src/listwidgetbackend.cpp
+src/messagesformaction.cpp
 src/minifluxapi.cpp
 src/minifluxurlreader.cpp
 src/newsblurapi.cpp
