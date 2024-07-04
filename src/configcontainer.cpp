@@ -164,7 +164,8 @@ ConfigContainer::ConfigContainer()
 	{
 		"notify-format",
 		ConfigData(_("Newsboat: finished reload, %f unread "
-				"feeds (%n unread articles total)"),
+				"feeds (%n unread articles total)"
+				"%?E?, %E feeds failed to reload?"),
 			ConfigDataType::STR)},
 	{"notify-program", ConfigData("", ConfigDataType::PATH)},
 	{"notify-screen", ConfigData("no", ConfigDataType::BOOL)},

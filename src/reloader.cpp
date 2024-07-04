@@ -337,7 +337,7 @@ void Reloader::notify_reload_finished(unsigned int unread_feeds_before,
 			std::to_string(article_count >= 0 ? article_count : 0));
 		fmt.register_fmt(
 			'D', std::to_string(feed_count >= 0 ? feed_count : 0));
-		fmt.register_fmt('E', std::to_string(failed_feed_reloads));
+		fmt.register_fmt('E', failed_feed_reloads > 0 ? std::to_string(failed_feed_reloads) : "");
 		notify(fmt.do_format(cfg.get_configvalue("notify-format")));
 	}
 }
